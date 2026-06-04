@@ -15,4 +15,5 @@ export default defineConfig({
             '@': '/resources/js',
         },
     },
+    base: '/',
 })
