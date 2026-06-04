@@ -1,28 +1,17 @@
 FROM php:8.2-cli
 
-RUN apt-get update && apt-get install -y \
-    git curl zip unzip libzip-dev libsqlite3-dev \
-    && curl -fsSL https://deb.nodesource.com/setup_20.x | bash - \
-    && apt-get install -y nodejs \
-    && docker-php-ext-install zip pdo pdo_sqlite
-
-COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+RUN apt-get update && apt-get install -y unzip sqlite3 libsqlite3-dev curl
+RUN curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
+RUN curl -fsSL https://deb.nodesource.com/setup_20.x | bash - && apt-get install -y nodejs
 
 WORKDIR /app
-
 COPY . .
 
 RUN composer install --no-dev --optimize-autoloader
+RUN npm install
+RUN npm run build
 
-RUN npm install && npm run build
+RUN touch database/database.sqlite
+RUN php artisan storage:link
 
-RUN mkdir -p storage/app/public storage/framework/cache storage/framework/sessions storage/framework/views storage/logs bootstrap/cache
-
-RUN chmod -R 775 storage bootstrap/cache
-
-EXPOSE 10000
-
-CMD php artisan migrate --force && \
-    php artisan storage:link && \
-    php artisan config:clear && \
-    php artisan serve --host=0.0.0.0 --port=10000
+CMD php artisan migrate --force && php artisan serve --host=0.0.0.0 --port=${PORT:-10000}
